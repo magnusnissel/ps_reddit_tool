@@ -80,7 +80,7 @@ def extract_from_dump(subreddit:str, year:int, month:int, folder:Optional[str]=N
                             if is_relevant_ln(ln, subreddit) is True:
                                 h_out.write(ln.decode("utf-8"))
                                 n = count_and_log(n)
-            logging.info(f"Saved {n:} comments to {out_fp}")
+            logging.info(f"Saved {n:,} comments to {out_fp}")
 
 
 
@@ -89,8 +89,8 @@ def download_file(url:str, filepath:pathlib.Path) -> bool:
     retries = Retry(connect=5, read=3, redirect=3)
     http = urllib3.PoolManager(retries=retries)
     try:
-        with http.request('GET',url, preload_content=False) as resp, open(filepath, 'wb') as outpath:
-            shutil.copyfileobj(resp, outpath)
+        with http.request('GET',url, preload_content=False) as resp, open(filepath, 'wb') as h_out:
+            shutil.copyfileobj(resp, h_out)
         return True
     except urllib3.exceptions.HTTPError as e:
         logging.error(e)
@@ -106,8 +106,8 @@ def download_dump(year:int, month:int, folder:Optional[str]=None) -> None:
         data_dir = DEFAULT_DATA_DIR
     data_dir.mkdir(parents=True, exist_ok=True)
     ext = infer_extension(year, month)
+    date_str = f"{year}-{str(month).zfill(2)}"
     if year < 2020:  # monthly archive files, varying extenions
-        date_str = f"{year}-{str(month).zfill(2)}"
         urls =[f"https://files.pushshift.io/reddit/comments/RC_{date_str}.{ext}"]
     else:  # daily archive files, zst 
         urls = []
@@ -118,7 +118,7 @@ def download_dump(year:int, month:int, folder:Optional[str]=None) -> None:
                 pass
             else:
                 urls.append(f"https://files.pushshift.io/reddit/comments/RC_{day.isoformat()}.{ext}")
-    logging.info(f"Downloading {len(urls)} file(s) to {data_dir}")
+    logging.info(f"Downloading {len(urls)} file(s) to {data_dir} for {date_str}")
     for url in urls:
         fn = url.split("/")[-1]
         fp = data_dir / fn
@@ -130,10 +130,17 @@ def download_dump(year:int, month:int, folder:Optional[str]=None) -> None:
             logging.warning(f"Did not download {fn}")
 
 
+def batch_download_dumps(from_year:int, to_year:int, folder:Optional[str]=None) -> None:
+    if from_year > to_year:
+        from_year, to_year = to_year, from_year
+    for y in range(from_year, to_year+1):
+        for m in range(1, 13):
+            download_dump(year=y, month=m)
     
 
 if __name__ == "__main__":
     fire.Fire({
         'download': download_dump,
+        'batch-download': batch_download_dumps,
         'extract': extract_from_dump,
     })
