@@ -30,7 +30,7 @@ def count_and_log(n:int) -> int:
     return n + 1
 
 
-def split_extracted( year:int, month:int, subreddit:str, delete_source:bool=False, folder:Optional[str]=None) -> None:
+def split_extracted(year:int, month:int, subreddit:str, delete_source:bool=False, folder:Optional[str]=None) -> None:
     """Split extracted subreddit/year/month files further by day"""
     if folder is not None:
         data_dir = pathlib.Path(folder)
