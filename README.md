@@ -18,6 +18,12 @@ The script can also be used to further split these exctracted subreddit files in
 
     ```python3 cli.py download 2020 2 --force=True```
 
+- Batch download dumps for all months of the years 2016, 2017, ann 2018
+
+    ```python3 cli.py batch-download 2016 2018```
+
+
+
 
 ## Configuration
 
@@ -27,6 +33,6 @@ By default the files are downloaded in a folder named __ps_dump_extractor__ with
 
 This is script is provided as-is without any warranty and guarantee of functionality.
 
-Given that it is dependent on the availablily of the files provided by  __pushshift.io__ it is will be impacted by any changes that the team behind __pushshift.io__ may make to their directory structures, file formats, naming conventions or the content of the dumps.
+Given that it is dependent on the availablily of the files provided by  __pushshift.io__ it will be impacted by any changes that the team behind __pushshift.io__ may make to their directory structures, file formats, naming conventions or the content of the dumps.
 
 This script is not endorsed or affiliated with either __pushshift.io__ or __Reddit__.
