@@ -3,8 +3,9 @@
 ## About
 
 This script provides a python CLI tool that allows you to download __Reddit__ comment dumps from __pushshift.io__ and to then extract the comments for a particular subreddit.
-The comments are split into uncompressed files (by subreddit & month) using the same basic structure (one JSON object per line containing the data for one comment).
-The script can also be used to further split these exctracted subreddit files into daily chunks (using each comment's UTC creation date).
+The comments are split into uncompressed files (by subreddit & month) using the same basic structure (one JSON object per line containing the data for one comment) as the original.
+
+The script can also be used to further split these exctracted subreddit files into daily chunks (using each comment's UTC creation date) to create smaller files to work with.
 
 ## Example
 
