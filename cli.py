@@ -131,10 +131,10 @@ def batch_extract_from_dumps(from_year: int, to_year:int, subreddit:str, force:b
     for y in range(from_year, to_year+1):
         if y > 2005:
             for m in range(1, 13):
-                download_dump(year=y, month=m, force=force)
+                download_dump(year=y, month=m, subreddit=subreddit, force=force, folder=folder)
         else:
             if y == 2005:
-                download_dump(year=y, month=12, force=force)
+                download_dump(year=y, month=12, subreddit=subreddit, force=force, folder=folder)
             else:
                 logging.warning(f"No data available for {y}")
 
@@ -191,10 +191,10 @@ def batch_download_dumps(from_year:int, to_year:int, force:bool=False, folder:Op
     for y in range(from_year, to_year+1):
         if y > 2005:
             for m in range(1, 13):
-                download_dump(year=y, month=m, force=force)
+                download_dump(year=y, month=m, force=force, folder=folder)
         else:
             if y == 2005:
-                download_dump(year=y, month=12, force=force)
+                download_dump(year=y, month=12, force=force, folder=folder)
             else:
                 logging.wwrning(f"No data available for {y}")
 
