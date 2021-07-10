@@ -10,7 +10,7 @@ The script can also be used to further split these exctracted subreddit files in
 
 ### Downloading
 
-- Download dumps for March 2006, unless the file already exists:
+- Download dump for March 2006, unless the file exists already:
 
     ```python3 cli.py download 2016 3```
 
@@ -22,6 +22,15 @@ The script can also be used to further split these exctracted subreddit files in
 
     ```python3 cli.py batch-download 2016 2018```
 
+### Exctraction
+
+- Exctract all June 2019 comments from the WNBA subreddit (assuming the June 2019 was downloaded), unless the subreddit file exists already
+
+    ```python3 cli.py extract 2019 6 wnba```
+
+- Extract all comments from the WNBA subreddit from January 2018 to December 2019, overwriting any existing subreddit files 
+
+    ```python3 cli.py batch-extract 2018 2019 wnba --force=True```
 
 
 
