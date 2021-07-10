@@ -22,9 +22,9 @@ The script can also be used to further split these exctracted subreddit files in
 
     ```python3 cli.py batch-download 2016 2018```
 
-### Exctraction
+### Extraction
 
-- Exctract all June 2019 comments from the WNBA subreddit (assuming the June 2019 was downloaded), unless the subreddit file exists already
+- Exctract all June 2019 comments from the WNBA subreddit unless the exctracted file exists already
 
     ```python3 cli.py extract 2019 6 wnba```
 
@@ -32,7 +32,17 @@ The script can also be used to further split these exctracted subreddit files in
 
     ```python3 cli.py batch-extract 2018 2019 wnba --force=True```
 
+### Splitting
 
+During extraction one file is created for each subreddit & month, even if individual daily dumps were downloaded (e.g. for 2020 data). The _split_ command can be used to break these extracted files down into smaller daily files. 
+
+- Create daily subreddit comment files from the previously-extracted WNBA June 2019 file
+
+    ```python3 cli.py split 2019 6 wnba```
+
+- Create daily subreddit comment files from the previously-extracted WNBA June 2019 file & then delete the original (monthly) file
+
+    ```python3 cli.py split 2019 6 wnba --delete_source=True```
 
 ## Configuration
 
