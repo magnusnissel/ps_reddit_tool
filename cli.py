@@ -70,10 +70,7 @@ def split_extracted(year:int, month:int, subreddit:str, delete_source:bool=False
 def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
     """Extract json objects for a specific subreddit for a given year and month into a single year/month file,
        assuninng the necessary dump files were downloaded beforehand"""
-    if folder is not None:
-        data_dir = pathlib.Path(folder)
-    else:
-        data_dir = DEFAULT_DATA_DIR
+    data_dir = determine_data_dir(folder)
     ext = infer_extension(year, month)
     subreddit = subreddit.lower()
     dn = data_dir / subreddit
@@ -151,12 +148,17 @@ def download_file(url:str, filepath:pathlib.Path) -> bool:
         return False
 
 
-def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=None) -> None:
+def determine_data_dir(folder:Optional[str]=None) -> pathlib.Path:
+    """Utility function to check if a folder is provided or if the default should be used, also creates the dir if not existing"""
     if folder is not None:
         data_dir = pathlib.Path(folder)
     else:
         data_dir = DEFAULT_DATA_DIR
     data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
+def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=None) -> None:
+    data_dir = determine_data_dir(folder)
     ext = infer_extension(year, month)
     date_str = f"{year}-{str(month).zfill(2)}"
     if year < 2020:  # monthly archive files, varying extenions
@@ -198,6 +200,21 @@ def batch_download_dumps(from_year:int, to_year:int, force:bool=False, folder:Op
             else:
                 logging.wwrning(f"No data available for {y}")
 
+def list_files(downloaded:bool=True, extracted:bool=True, folder:Optional[str]=None) -> None:
+    data_dir = determine_data_dir(folder)
+    if downloaded is True:
+        print("Downloaded comment dumps:")
+        files = sorted(data_dir.glob("RC_*-*.*"))    
+        for i, fp in enumerate(files):
+            print(i, fp, sep="\t")
+    if extracted is True:
+        print("Extracted comment dumps:")
+        files = sorted(data_dir.glob("*/*_*-*"))    
+        for i, fp in enumerate(files):
+            print(i, fp, sep="\t")
+
+
+
 
 if __name__ == "__main__":
     fire.Fire({
@@ -206,4 +223,5 @@ if __name__ == "__main__":
         'extract': extract_from_dump,
         "batch-extract": batch_extract_from_dumps,
         'split': split_extracted,
+        "list": list_files,
     })
