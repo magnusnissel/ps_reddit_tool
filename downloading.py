@@ -7,6 +7,21 @@ import urllib3
 
 from helpers import determine_data_dir, infer_extension
 
+
+def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pathlib.Path:
+    if kind == "comments":
+        url = "https://files.pushshift.io/reddit/comments/sha256sum.txt"
+    elif kind == "submissions":
+        url = "https://files.pushshift.io/reddit/submissions/sha256sums.txt"
+    else:
+        raise ValueError("Invalid value for 'kind' in download_checksum_file")
+    data_dir = determine_data_dir(folder, None)
+    fp = data_dir / f"sha256sums_{kind}.txt"
+    success = _download_file(url, fp) # TODO: Raise appropriate exception if dowload fails
+    return fp
+    
+
+
 def _download_file(url:str, filepath:pathlib.Path) -> bool:
     retries = urllib3.util.retry.Retry(connect=5, read=3, redirect=3)
     http = urllib3.PoolManager(retries=retries)
@@ -23,7 +38,7 @@ def _get_paths_for_urls(urls:list, data_dir:pathlib.Path) -> "list[pathlib.Path]
     return files
 
 def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=None) -> None:
-    data_dir = determine_data_dir(folder)
+    data_dir = determine_data_dir(folder, "compressed")
     ext = infer_extension(year, month)
     date_str = f"{year}-{str(month).zfill(2)}"
     if year < 2020:  # monthly archive files, varying extenions

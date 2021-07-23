@@ -13,19 +13,19 @@ from helpers import determine_data_dir, infer_extension, is_relevant_ln, count_a
 def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
     """Extract json objects for a specific subreddit for a given year and month into a single year/month file,
        assuming the necessary dump files were downloaded beforehand"""
-    data_dir = determine_data_dir(folder)
+    in_dn = determine_data_dir(folder, "compressed")
+    out_dn = determine_data_dir(folder, f"extracted/monthly/{subreddit}")
+
     ext = infer_extension(year, month)
     subreddit = subreddit.lower()
-    dn = data_dir / subreddit
-    dn.mkdir(exist_ok=True, parents=True)
     date_str = f"{year}-{str(month).zfill(2)}"
-    out_fp = dn / f"{subreddit}_{date_str}"
+    out_fp = out_dn / f"{subreddit}_{date_str}"
     if force is True or not out_fp.is_file():
         ext_start = datetime.datetime.utcnow()
 
         if year < 2020:
             fn = f"RC_{date_str}.{ext}"
-            files = [data_dir / fn]
+            files = [in_dn / fn]
         else:
             files = []
             for d in range(1, 32):
@@ -35,11 +35,11 @@ def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, fold
                     pass
                 else:
                     fn = f"RC_{day.isoformat()}.{ext}"
-                    fp = data_dir / fn
+                    fp = in_dn / fn
                     files.append(fp)
         for fp in files:
             if fp.is_file():
-                logging.info(f"Extracting comments for subreddit '{subreddit}' from {fp.name} to {out_fp.name}")
+                logging.info(f"Extracting comments for subreddit '{subreddit}' from {fp} to {out_fp}")
 
                 with open(out_fp, mode="w", encoding="utf-8") as h_out:
                     n = 1
@@ -68,7 +68,7 @@ def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, fold
         logging.info(f"Extraction process completed after {duration}")
     else:
         logging.info(f"Skipping comment extraction to {out_fp} because the file already exists  (--force=True to override this)")
-   
+
 
 
 def batch_extract_from_dumps(from_year: int, to_year:int, subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:

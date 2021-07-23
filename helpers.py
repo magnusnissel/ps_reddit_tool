@@ -19,6 +19,17 @@ def determine_data_dir(folder:Optional[str]=None) -> pathlib.Path:
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
 
+def determine_data_dir(folder:Optional[str]=None, sub_dir:Optional[str]=None) -> pathlib.Path:
+    """Utility function to check if a folder is provided or if the default should be used, also creates the dir if not existing"""
+    if folder is not None:
+        data_dir = pathlib.Path(folder)
+    else:
+        data_dir = DEFAULT_DATA_DIR
+    if sub_dir is not None:
+        data_dir = data_dir / sub_dir 
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
 
 def infer_extension(year:int, month:int) -> str:
     ext = "zst"

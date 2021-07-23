@@ -8,10 +8,10 @@ from helpers import determine_data_dir, count_and_log
 
 def split_extracted(year:int, month:int, subreddit:str, delete_source:bool=False, folder:Optional[str]=None) -> None:
     """Split extracted subreddit/year/month files further by day"""
-    data_dir = determine_data_dir(folder)
     subreddit = subreddit.lower()
-    dn = data_dir / subreddit
-    in_fp = dn / f"{subreddit}_{year}-{str(month).zfill(2)}"
+    in_sub_dn = determine_data_dir(folder, f"extracted/monthly/{subreddit}")
+    out_sub_dn = determine_data_dir(folder, f"extracted/daily/{subreddit}")
+    in_fp = in_sub_dn / f"{subreddit}_{year}-{str(month).zfill(2)}"
     split_start = datetime.datetime.utcnow()
     logging.info(f"Splitting '{in_fp}' into daily files")
     try:
@@ -25,7 +25,7 @@ def split_extracted(year:int, month:int, subreddit:str, delete_source:bool=False
                 if day != cur_day:
                     if h_out is not None:
                         h_out.close()
-                    out_fp = dn / f"{subreddit}_{day.isoformat()}"
+                    out_fp = out_sub_dn / f"{subreddit}_{day.isoformat()}"
                     h_out = open(out_fp, mode="w", encoding="utf-8")
                     cur_day = day
                     logging.info(f"Splitting comments to {out_fp}")
