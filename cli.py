@@ -30,14 +30,13 @@ def count_and_log(n:int) -> int:
     return n + 1
 
 
+
 def split_extracted(year:int, month:int, subreddit:str, delete_source:bool=False, folder:Optional[str]=None) -> None:
     """Split extracted subreddit/year/month files further by day"""
-    if folder is not None:
-        data_dir = pathlib.Path(folder)
-    else:
-        data_dir = DEFAULT_DATA_DIR
+    data_dir = determine_data_dir(folder)
+
     subreddit = subreddit.lower()
-    dn = data_dir / subreddit
+    dn = data_dir / "daily_splits" / subreddit
     in_fp = dn / f"{subreddit}_{year}-{str(month).zfill(2)}"
     logging.info(f"Splitting '{in_fp}' into daily files")
     try:
@@ -70,17 +69,19 @@ def split_extracted(year:int, month:int, subreddit:str, delete_source:bool=False
 def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
     """Extract json objects for a specific subreddit for a given year and month into a single year/month file,
        assuninng the necessary dump files were downloaded beforehand"""
-    data_dir = determine_data_dir(folder)
+    in_data_dir = determine_data_dir(folder, "compressed")
+    out_data_dir = determine_data_dir(folder, "extracted")
+
     ext = infer_extension(year, month)
     subreddit = subreddit.lower()
-    dn = data_dir / subreddit
-    dn.mkdir(exist_ok=True, parents=True)
+    subreddit_dn = out_data_dir / subreddit
+    subreddit_dn.mkdir(exist_ok=True, parents=True)
     date_str = f"{year}-{str(month).zfill(2)}"
-    out_fp = dn / f"{subreddit}_{date_str}"
+    out_fp = subreddit_dn / f"{subreddit}_{date_str}"
     if force is True or not out_fp.is_file():
         if year < 2020:
             fn = f"RC_{date_str}.{ext}"
-            files = [data_dir / fn]
+            files = [in_data_dir / fn]
         else:
             files = []
             for d in range(1, 32):
@@ -90,7 +91,7 @@ def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, fold
                     pass
                 else:
                     fn = f"RC_{day.isoformat()}.{ext}"
-                    fp = data_dir / fn
+                    fp = in_data_dir / fn
                     files.append(fp)
         logging.info(f"Extracting comments for subreddit '{subreddit}' from {len(files)} file(s)")
         for fp in files:
@@ -148,17 +149,19 @@ def download_file(url:str, filepath:pathlib.Path) -> bool:
         return False
 
 
-def determine_data_dir(folder:Optional[str]=None) -> pathlib.Path:
+def determine_data_dir(folder:Optional[str]=None, sub_dir:Optional[str]=None) -> pathlib.Path:
     """Utility function to check if a folder is provided or if the default should be used, also creates the dir if not existing"""
     if folder is not None:
         data_dir = pathlib.Path(folder)
     else:
         data_dir = DEFAULT_DATA_DIR
+    if sub_dir is not None:
+        data_dir = data_dir / sub_dir 
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
 
 def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=None) -> None:
-    data_dir = determine_data_dir(folder)
+    data_dir = determine_data_dir(folder, "compressed")
     ext = infer_extension(year, month)
     date_str = f"{year}-{str(month).zfill(2)}"
     if year < 2020:  # monthly archive files, varying extenions
@@ -200,14 +203,16 @@ def batch_download_dumps(from_year:int, to_year:int, force:bool=False, folder:Op
             else:
                 logging.wwrning(f"No data available for {y}")
 
+
 def list_files(downloaded:bool=True, extracted:bool=True, folder:Optional[str]=None) -> None:
-    data_dir = determine_data_dir(folder)
     if downloaded is True:
+        data_dir = determine_data_dir(folder, "compressed")
         print("Downloaded comment dumps:")
         files = sorted(data_dir.glob("RC_*-*.*"))    
         for i, fp in enumerate(files):
             print(i, fp, sep="\t")
     if extracted is True:
+        data_dir = determine_data_dir(folder, "extracted")
         print("Extracted comment dumps:")
         files = sorted(data_dir.glob("*/*_*-*"))    
         for i, fp in enumerate(files):
