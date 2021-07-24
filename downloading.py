@@ -18,7 +18,7 @@ def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pa
         raise ValueError("Invalid value for 'kind' in download_checksum_file")
     data_dir = determine_data_dir(folder, None)
     fp = data_dir / f"sha256sums_{kind}.txt"
-    success = _download_file(url, fp) # TODO: Raise appropriate exception if dowload fails
+    success = _download_file(url, fp, monitor=False) # TODO: Raise appropriate exception if dowload fails
     return fp
     
 
@@ -32,15 +32,18 @@ def _monitor_filepath(fp:pathlib.Path) -> None:
             time.sleep(30)
 
 
-def _download_file(url:str, fp:pathlib.Path) -> bool:
+def _download_file(url:str, fp:pathlib.Path, monitor:bool=True) -> bool:
     retries = urllib3.util.retry.Retry(connect=5, read=3, redirect=3)
     http = urllib3.PoolManager(retries=retries)
     try:
-        p_mon = mp.Process(target=_monitor_filepath, args=(fp,))
-        p_mon.start()    
+        if monitor is True:
+            p_mon = mp.Process(target=_monitor_filepath, args=(fp,))
+            p_mon.start()    
         with http.request('GET',url, preload_content=False) as resp, open(fp, 'wb') as h_out:
             shutil.copyfileobj(resp, h_out)
-        p_mon.join()
+        if monitor is True:
+            p_mon.terminate()
+            p_mon.join()
         return True
     except urllib3.exceptions.HTTPError as e:
         logging.error(e)

@@ -38,6 +38,7 @@ def _read_file_hash(fp:pathlib.Path):
 
 def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=None, verify:bool=False, delete_mismatched:bool=False, delete_empty:bool=False) -> None:
     if verify is True:
+        logging.info("Downloading the most recent checksum file")
         check_fp = downloading.download_checksum_file("comments")
         check_map = _parse_checksum_file(check_fp)
 
@@ -70,7 +71,7 @@ def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=
                     if not fp.is_file():
                         logging.warning(f"Deleted file with invalid checksum: {fp}")
             if delete_empty is True and fp.stat().st_size == 0:
-                logging.warning(f"Deleted 0 MB file: {fp}")
+                logging.warning(f"Deleted 0 byte file: {fp}")
 
 
     if extracted is True:
