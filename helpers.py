@@ -5,6 +5,16 @@ from typing import Optional
 import logging
 
 
+def get_file_size_info_str(fp: pathlib.Path) -> str: 
+    unit = "MB"
+    file_size = fp.stat().st_size / 1024 / 1024
+    if file_size > 1000:
+        file_size = file_size / 1024
+        unit = "GB"
+    file_size = round(file_size, 2)
+    return f"{file_size:,} {unit}"
+
+
 def count_and_log(n:int) -> int:
     if n % 10000 == 0:
         logging.info(f"{n:,} comments processed so far")

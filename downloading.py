@@ -6,7 +6,7 @@ from typing import Optional
 import urllib3
 import multiprocessing as mp
 import time
-from helpers import determine_data_dir, infer_extension
+from helpers import determine_data_dir, infer_extension, get_file_size_info_str
 
 
 def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pathlib.Path:
@@ -25,13 +25,7 @@ def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pa
 def _monitor_filepath(fp:pathlib.Path) -> None:
     while True:
         try:
-            unit = "MB"
-            file_size = fp.stat().st_size / 1024 / 1024
-            if file_size > 1000:
-                file_size = file_size / 1024
-                unit = "GB"
-            file_size = round(file_size, 2)
-            logging.info(f"{file_size:,} {unit} downloaded so far")
+            logging.info(f"{get_file_size_info_str(fp)} downloaded so far")
         except FileNotFoundError:
             time.sleep(10)
         else:
@@ -92,7 +86,7 @@ def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=No
             success = _download_file(url, fp)
             duration = str(datetime.datetime.utcnow() - dl_start).split(".")[0].zfill(8)
             if success is True:
-                logging.info(f"Downloaded {fp.name} in {duration}")
+                logging.info(f"Downloaded {fp.name} in {duration} ({get_file_size_info_str(fp)})")
             else:
                 logging.warning(f"Failed to download {fp.name} after trying for  {duration}")
 

@@ -4,7 +4,7 @@ import fire
 from typing import  Optional
 import hashlib
 
-from helpers import determine_data_dir
+from helpers import determine_data_dir, get_file_size_info_str
 import downloading
 import extraction
 import processing
@@ -36,7 +36,7 @@ def _read_file_hash(fp:pathlib.Path):
 
 
 
-def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=None, verify:bool=False, delete_mismatched:bool=False) -> None:
+def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=None, verify:bool=False, delete_mismatched:bool=False, delete_empty:bool=False) -> None:
     if verify is True:
         check_fp = downloading.download_checksum_file("comments")
         check_map = _parse_checksum_file(check_fp)
@@ -62,18 +62,22 @@ def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=
                        
 
             if bad_check is False:
-                logging.info(f"{i} {fp}{check_str}")
+                logging.info(f"{i} {fp} ({get_file_size_info_str(fp)}){check_str}")
             else:
-                logging.warning(f"{i} {fp}{check_str}")
+                logging.warning(f"{i} {fp} ({get_file_size_info_str(fp)}){check_str}")
                 if delete_mismatched is True:
                     fp.unlink()
                     if not fp.is_file():
                         logging.warning(f"Deleted file with invalid checksum: {fp}")
+            if delete_empty is True and fp.stat().st_size == 0:
+                logging.warning(f"Deleted 0 MB file: {fp}")
+
+
     if extracted is True:
         data_dir = determine_data_dir(folder, "extracted")
         print("Extracted comment dumps:")
         for i, fp in enumerate(sorted(data_dir.glob("**/*_*-*"))):
-            print(i, fp, sep="\t")
+            logging.info(f"{i} {fp} ({get_file_size_info_str(fp)})")
 
 
 
