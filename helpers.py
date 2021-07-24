@@ -6,8 +6,11 @@ import logging
 
 
 def get_file_size_info_str(fp: pathlib.Path) -> str: 
+    return convert_size_to_str(fp.stat().st_size)
+
+def convert_size_to_str(file_size:int) -> str:
+    file_size = file_size  / 1024 / 1024
     unit = "MB"
-    file_size = fp.stat().st_size / 1024 / 1024
     if file_size > 1000:
         file_size = file_size / 1024
         unit = "GB"

@@ -6,7 +6,7 @@ from typing import Optional
 import urllib3
 import multiprocessing as mp
 import time
-from helpers import determine_data_dir, infer_extension, get_file_size_info_str
+from helpers import determine_data_dir, infer_extension, get_file_size_info_str, convert_size_to_str
 
 
 def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pathlib.Path:
@@ -30,6 +30,12 @@ def _monitor_filepath(fp:pathlib.Path) -> None:
             time.sleep(10)
         else:
             time.sleep(30)
+
+
+def _check_url_content_length(url: str) -> int:
+    http = urllib3.PoolManager()
+    resp = http.request("GET", url, preload_content=False)
+    return int(resp.headers.get("Content-Length"))
 
 
 def _download_file(url:str, fp:pathlib.Path, monitor:bool=True) -> bool:
@@ -85,6 +91,8 @@ def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=No
         if force is True or not fp.is_file():  # Second check just in case is_file() status has changed 
             
             logging.info(f"Downloading {fp.name} ...")
+            dl_file_size = _check_url_content_length(url)
+            logging.info(f"Approximate file size: {convert_size_to_str(dl_file_size)}")
             dl_start = datetime.datetime.utcnow()
             success = _download_file(url, fp)
             duration = str(datetime.datetime.utcnow() - dl_start).split(".")[0].zfill(8)
