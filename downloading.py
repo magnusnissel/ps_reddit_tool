@@ -4,7 +4,8 @@ import datetime
 import shutil
 from typing import Optional
 import urllib3
-
+import multiprocessing as mp
+import time
 from helpers import determine_data_dir, infer_extension
 
 
@@ -21,13 +22,31 @@ def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pa
     return fp
     
 
+def _monitor_filepath(fp:pathlib.Path) -> None:
+    while True:
+        try:
+            unit = "MB"
+            file_size = fp.stat().st_size / 1024 / 1024
+            if file_size > 1000:
+                file_size = file_size / 1024
+                unit = "GB"
+            file_size = round(file_size, 2)
+            logging.info(f"{file_size:,} {unit} downloaded so far")
+        except FileNotFoundError:
+            time.sleep(10)
+        else:
+            time.sleep(30)
 
-def _download_file(url:str, filepath:pathlib.Path) -> bool:
+
+def _download_file(url:str, fp:pathlib.Path) -> bool:
     retries = urllib3.util.retry.Retry(connect=5, read=3, redirect=3)
     http = urllib3.PoolManager(retries=retries)
     try:
-        with http.request('GET',url, preload_content=False) as resp, open(filepath, 'wb') as h_out:
+        p_mon = mp.Process(target=_monitor_filepath, args=(fp,))
+        p_mon.start()    
+        with http.request('GET',url, preload_content=False) as resp, open(fp, 'wb') as h_out:
             shutil.copyfileobj(resp, h_out)
+        p_mon.join()
         return True
     except urllib3.exceptions.HTTPError as e:
         logging.error(e)

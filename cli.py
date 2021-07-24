@@ -69,9 +69,6 @@ def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=
                     fp.unlink()
                     if not fp.is_file():
                         logging.warning(f"Deleted file with invalid checksum: {fp}")
-
-
-
     if extracted is True:
         data_dir = determine_data_dir(folder, "extracted")
         print("Extracted comment dumps:")
