@@ -68,21 +68,3 @@ def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, fold
         logging.info(f"Extraction process completed after {duration}")
     else:
         logging.info(f"Skipping comment extraction to {out_fp} because the file already exists  (--force=True to override this)")
-
-
-
-def batch_extract_from_dumps(from_year: int, to_year:int, subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
-    if from_year > to_year:
-        from_year, to_year = to_year, from_year
-    batch_start = datetime.datetime.utcnow()
-    for y in range(from_year, to_year+1):
-        if y > 2005:
-            for m in range(1, 13):
-                extract_from_dump(year=y, month=m, subreddit=subreddit, force=force, folder=folder)
-        else:
-            if y == 2005:
-                extract_from_dump(year=y, month=12, subreddit=subreddit, force=force, folder=folder)
-            else:
-                logging.warning(f"No data available for {y}")
-    duration = str(datetime.datetime.utcnow() - batch_start).split(".")[0].zfill(8)
-    logging.info(f"Batch  process completed after {duration}")

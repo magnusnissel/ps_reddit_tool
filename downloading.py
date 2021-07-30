@@ -101,19 +101,3 @@ def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=No
                 logging.info(f"Downloaded {fp.name} in {duration} ({get_file_size_info_str(fp)})")
             else:
                 logging.warning(f"Failed to download {fp.name} after trying for  {duration}")
-
-
-def batch_download_dumps(from_year:int, to_year:int, force:bool=False, folder:Optional[str]=None) -> None:
-    if from_year > to_year:
-        from_year, to_year = to_year, from_year
-    for y in range(from_year, to_year+1):
-        if y > 2005:
-            for m in range(1, 13):
-                download_dump(year=y, month=m, force=force, folder=folder)
-        else:
-            if y == 2005:
-                download_dump(year=y, month=12, force=force, folder=folder)
-            else:
-                logging.warning(f"No data available for {y}")
-
-
