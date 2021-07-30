@@ -45,6 +45,41 @@ During extraction one file is created for each subreddit & month, even if indivi
 
     ```python3 cli.py split 2019 6 wnba --delete_source=True```
 
+### Listing and checking
+
+- List all compressed files (with size) that were downloaded
+
+    ```python3 cli.py list```
+
+
+- Also list all extracted / split subreddit files
+
+    ```python3 cli.py list --extracted=True```
+
+- List all compressed files and display if the checksum matches the one provided by pushshift.io (if available)
+
+    ```python3 cli.py list --verify=True```
+
+- List all compressed files, delete all files that have an unexpected checksum
+
+    ```python3 cli.py list --verify=True --delete_mismatched=True```
+
+- List all compressed files and delete all files that are empty (0 bytes)
+
+    ```python3 cli.py list --delete_empty=True```
+
+- List all compressed files and delete all files that are undersized (by more than 20%) compared to the expected size (as given by the Content-Length header)
+
+    ```python3 cli.py list --delete_undersized=True```
+
+- As above, but delete all files that aren't larger than 95% of the expected size
+
+    ```python3 cli.py list --delete_undersized=True --size_ratio=0.95```
+
+
+
+
+
 ## Configuration
 
 By default the files are downloaded in a folder named __ps_dump_extractor__ within the current user's home directory. This default change be permanently changed by editing the line in _config.py_. Alternatively, the _--folder_ arguments can be passed to any given command to instead use that folder for both reading & writing.
