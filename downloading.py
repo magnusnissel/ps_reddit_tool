@@ -63,7 +63,7 @@ def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=No
     data_dir = determine_data_dir(folder, "compressed")
     ext = infer_extension(year, month)
     date_str = f"{year}-{str(month).zfill(2)}"
-    if year < 2020:  # monthly archive files, varying extenions
+    if year < 2020 or (year == 2020 and month > 10):  # monthly archive files, varying extenions
         urls =[f"https://files.pushshift.io/reddit/comments/RC_{date_str}.{ext}"]
     else:  # daily archive files, zst 
         urls = []
@@ -74,6 +74,7 @@ def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=No
                 pass
             else:
                 urls.append(f"https://files.pushshift.io/reddit/comments/RC_{day.isoformat()}.{ext}")
+
     paths = _get_paths_for_urls(urls, data_dir)
     dl_urls = []
     dl_paths, skip_paths = [], []
