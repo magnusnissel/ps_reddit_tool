@@ -65,6 +65,11 @@ class AbstractTool():
         self.since = since
         self.until = until
 
+
+    def _initialize_dates(self, since:Union[str, int], until:Union[str, int, None]):
+        self._interpret_date_range(since, until)
+        self._set_periods()
+
     def _get_date_range_str(self, sep:str="to"):
         return f"{self.periods[0][0]}-{str(self.periods[0][1]).zfill(2)} {sep} {self.periods[-1][0]}-{str(self.periods[-1][1]).zfill(2)}"
 
@@ -72,7 +77,11 @@ class AbstractTool():
 class SubmissionTool(AbstractTool):
 
     def download(self, since:Union[str, int], until:Union[str, int, None], force:bool=False, folder:Optional[str]=None) -> None:
-        self.placeholder()
+        self._initialize_dates(since, until)
+        logging.info(f"Downloading available submission dumps from {self._get_date_range_str()}")
+        for p in self.periods:
+            downloading.download_dump(year=p[0], month=p[1], comments=False, submissions=True, force=force, folder=folder)
+    
 
     def extract(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
         self.placeholder()
@@ -94,23 +103,20 @@ class CommentTool(AbstractTool):
         super().__init__()
 
     def download(self, since:Union[str, int], until:Union[str, int, None], force:bool=False, folder:Optional[str]=None) -> None:
-        self._interpret_date_range(since, until)
-        self._set_periods()
+        self._initialize_dates(since, until)
         logging.info(f"Downloading available comment dumps from {self._get_date_range_str()}")
         for p in self.periods:
-            downloading.download_dump(year=p[0], month=p[1], force=force, folder=folder)
+            downloading.download_dump(year=p[0], month=p[1], comments=True, submissions=False, force=force, folder=folder)
 
     def extract(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
-        self._interpret_date_range(since, until)
-        self._set_periods() 
+        self._initialize_dates(since, until)
         subreddit = subreddit.lower().strip()
         logging.info(f"Extracting downloaded comments for subreddit '{subreddit}' from {self._get_date_range_str()}")
         for p in self.periods:
             extraction.extract_from_dump(year=p[0], month=p[1], subreddit=subreddit, force=force, folder=folder)
 
     def split(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, delete_source:bool=False, force:bool=False, folder:Optional[str]=None) -> None:
-        self._interpret_date_range(since, until)
-        self._set_periods() 
+        self._initialize_dates(since, until)
         subreddit = subreddit.lower().strip()
         logging.info(f"Splitting monthly '{subreddit}' files from {self._get_date_range_str()} into daily files")
         for p in self.periods:

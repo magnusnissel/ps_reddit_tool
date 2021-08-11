@@ -22,28 +22,35 @@ def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pa
     return fp
     
 
-def _monitor_filepath(fp:pathlib.Path) -> None:
+def _monitor_filepath(fp:pathlib.Path, target_size:Optional[float]=None) -> None:
+    time.sleep(10)  # initial delay
     while True:
         try:
-            logging.info(f"{get_file_size_info_str(fp)} downloaded so far")
+            if target_size is not None:
+                logging.info(f"{get_file_size_info_str(fp)} / {convert_size_to_str(target_size)} downloaded so far ({fp.name})")
+            else:
+                logging.info(f"{get_file_size_info_str(fp)} downloaded so far ({fp.name})")
         except FileNotFoundError:
             time.sleep(10)
         else:
-            time.sleep(30)
+            time.sleep(60)
 
 
 def _check_url_content_length(url: str) -> int:
     http = urllib3.PoolManager()
     resp = http.request("GET", url, preload_content=False)
-    return int(resp.headers.get("Content-Length"))
+    if resp.status == 200:
+        return int(resp.headers.get("Content-Length"))
+    else:
+        return -1
 
 
-def _download_file(url:str, fp:pathlib.Path, monitor:bool=True) -> bool:
+def _download_file(url:str, fp:pathlib.Path, monitor:bool=True, target_size:Optional[float]=None) -> bool:
     retries = urllib3.util.retry.Retry(connect=5, read=3, redirect=3)
     http = urllib3.PoolManager(retries=retries)
     try:
         if monitor is True:
-            p_mon = mp.Process(target=_monitor_filepath, args=(fp,))
+            p_mon = mp.Process(target=_monitor_filepath, args=(fp, target_size))
             p_mon.start()    
         with http.request('GET',url, preload_content=False) as resp, open(fp, 'wb') as h_out:
             shutil.copyfileobj(resp, h_out)
@@ -59,21 +66,19 @@ def _get_paths_for_urls(urls:list, data_dir:pathlib.Path) -> "list[pathlib.Path]
     files = [data_dir / u.split("/")[-1] for u in urls]
     return files
 
-def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=None) -> None:
+
+#https://files.pushshift.io/reddit/submissions/
+
+def download_dump(year:int, month:int, comments:bool=True, submissions:bool=True, force:bool=False, folder:Optional[str]=None) -> None:
     data_dir = determine_data_dir(folder, "compressed")
     ext = infer_extension(year, month)
     date_str = f"{year}-{str(month).zfill(2)}"
-    if year < 2020 or (year == 2020 and month > 10):  # monthly archive files, varying extenions
-        urls =[f"https://files.pushshift.io/reddit/comments/RC_{date_str}.{ext}"]
-    else:  # daily archive files, zst 
-        urls = []
-        for d in range(1, 32):
-            try:
-                day = datetime.date(year=year, month=month, day=d)
-            except ValueError: #invalid date, e.g. February 30th
-                pass
-            else:
-                urls.append(f"https://files.pushshift.io/reddit/comments/RC_{day.isoformat()}.{ext}")
+    urls =[]
+    if comments is True:
+        urls.append(f"https://files.pushshift.io/reddit/comments/RC_{date_str}.{ext}")     # varying extenions
+
+    if submissions is True:
+        urls.append(f"https://files.pushshift.io/reddit/submissions/RS_{date_str}.zst")
 
     paths = _get_paths_for_urls(urls, data_dir)
     dl_urls = []
@@ -85,19 +90,20 @@ def download_dump(year:int, month:int, force:bool=False, folder:Optional[str]=No
         else:
             skip_paths.append(fp)
     if len(dl_paths) > 0:
-        logging.info(f"Downloading {len(dl_paths)} file(s) to {data_dir} for {date_str}")
+        logging.info(f"Downloading {len(dl_paths)} file to {data_dir} for {date_str}")
     if force is False and len(skip_paths) > 0:
-        logging.info(f"Skipping {len(skip_paths)} existing files(s) for {date_str} (--force=True to override this)")
+        logging.info(f"Skipping {len(skip_paths)} existing files for {date_str} (--force=True to override this)")
     for fp, url in zip(dl_paths, dl_urls):
         if force is True or not fp.is_file():  # Second check just in case is_file() status has changed 
             
-            logging.info(f"Downloading {fp.name} ...")
             dl_file_size = _check_url_content_length(url)
-            logging.info(f"Approximate file size: {convert_size_to_str(dl_file_size)}")
-            dl_start = datetime.datetime.utcnow()
-            success = _download_file(url, fp)
-            duration = str(datetime.datetime.utcnow() - dl_start).split(".")[0].zfill(8)
-            if success is True:
-                logging.info(f"Downloaded {fp.name} in {duration} ({get_file_size_info_str(fp)})")
-            else:
-                logging.warning(f"Failed to download {fp.name} after trying for  {duration}")
+            if dl_file_size != -1:
+                logging.info(f"Downloading {fp.name} ...")
+                logging.info(f"Approximate file size: {convert_size_to_str(dl_file_size)}")
+                dl_start = datetime.datetime.utcnow()
+                success = _download_file(url, fp, True, dl_file_size)
+                duration = str(datetime.datetime.utcnow() - dl_start).split(".")[0].zfill(8)
+                if success is True:
+                    logging.info(f"Downloaded {fp.name} in {duration} ({get_file_size_info_str(fp)})")
+                else:
+                    logging.warning(f"Failed to download {fp.name} after trying for {duration}")
