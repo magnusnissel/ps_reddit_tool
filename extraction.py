@@ -2,19 +2,18 @@
 import datetime
 import logging
 from typing import Optional
-
 import bz2
 import lzma
 import pyzstd
+from config import DATA_DIR
+from helpers import infer_extension, is_relevant_ln, count_and_log
 
-from helpers import determine_data_dir, infer_extension, is_relevant_ln, count_and_log
 
-
-def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
+def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False) -> None:
     """Extract json objects for a specific subreddit for a given year and month into a single year/month file,
        assuming the necessary dump files were downloaded beforehand"""
-    in_dn = determine_data_dir(folder, "compressed")
-    out_dn = determine_data_dir(folder, f"extracted/monthly/{subreddit}")
+    in_dn = DATA_DIR / "compressed"
+    out_dn = DATA_DIR / f"extracted/monthly/{subreddit}"
 
     ext = infer_extension(year, month)
     subreddit = subreddit.lower()
