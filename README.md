@@ -82,7 +82,8 @@ During extraction one file is created for each subreddit & month. The _split_ co
 
 ## Configuration
 
-By default the files are downloaded in a folder named __ps_dump_extractor__ within the current user's home directory. This default change be permanently changed by editing the line in _config.py_. Alternatively, the _--folder_ arguments can be passed to any given command to instead use that folder for both reading & writing.
+By default the files are downloaded in a folder named __ps_dump_extractor__ within the current user's home directory. This default folder be changed by calling 
+```python3 cli.py config folder PATH_TO_FOLDER```.
 
 ## N.B.
 
