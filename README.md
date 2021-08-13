@@ -7,6 +7,13 @@ The comments are split into uncompressed files (by subreddit & month) using the 
 
 The script can also be used to further split these extracted subreddit files into daily chunks (using each comment's UTC creation date) to create smaller files to work with.
 
+
+
+## Configuration
+
+By default the files are downloaded in a folder named __ps_reddit_tool__ within the current user's home directory. This default folder be changed by calling 
+```python3 cli.py config folder PATH_TO_FOLDER```.
+
 ## Example
 
 ### Downloading
@@ -79,16 +86,10 @@ During extraction one file is created for each subreddit & month. The _split_ co
 
 
 
-
-## Configuration
-
-By default the files are downloaded in a folder named __ps_dump_extractor__ within the current user's home directory. This default folder be changed by calling 
-```python3 cli.py config folder PATH_TO_FOLDER```.
-
 ## N.B.
 
 This is script is provided as-is without any warranty and guarantee of functionality.
 
 Given that it is dependent on the availablily of the files provided by  __pushshift.io__ it will be impacted by any changes that the team behind __pushshift.io__ may make to their directory structures, file formats, naming conventions or the content of the dumps.
 
-This script is not endorsed or affiliated with either __pushshift.io__ or __Reddit__.
+This script and its author(s) are not endorsed or affiliated with either __pushshift.io__ or __Reddit__.
