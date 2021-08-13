@@ -6,24 +6,23 @@ from typing import Optional
 import urllib3
 import multiprocessing as mp
 import time
-from helpers import determine_data_dir, infer_extension, get_file_size_info_str, convert_size_to_str
+from helpers import infer_extension, get_file_size_info_str, convert_size_to_str
+from config import DATA_DIR
 
-
-def download_checksum_file(kind:str="comments", folder:Optional[str]=None) -> pathlib.Path:
+def download_checksum_file(kind:str="comments") -> pathlib.Path:
     if kind == "comments":
         url = "https://files.pushshift.io/reddit/comments/sha256sum.txt"
     elif kind == "submissions":
         url = "https://files.pushshift.io/reddit/submissions/sha256sums.txt"
     else:
         raise ValueError("Invalid value for 'kind' in download_checksum_file")
-    data_dir = determine_data_dir(folder, None)
-    fp = data_dir / f"sha256sums_{kind}.txt"
+    fp = DATA_DIR / f"sha256sums_{kind}.txt"
     success = _download_file(url, fp, monitor=False) # TODO: Raise appropriate exception if dowload fails
     return fp
     
 
 def _monitor_filepath(fp:pathlib.Path, target_size:Optional[float]=None) -> None:
-    time.sleep(10)  # initial delay
+    time.sleep(30)  # initial delay
     while True:
         try:
             if target_size is not None:
@@ -48,10 +47,10 @@ def _check_url_content_length(url: str) -> int:
 def _download_file(url:str, fp:pathlib.Path, monitor:bool=True, target_size:Optional[float]=None) -> bool:
     retries = urllib3.util.retry.Retry(connect=5, read=3, redirect=3)
     http = urllib3.PoolManager(retries=retries)
-    try:
-        if monitor is True:
+    if monitor is True:
             p_mon = mp.Process(target=_monitor_filepath, args=(fp, target_size))
             p_mon.start()    
+    try:
         with http.request('GET',url, preload_content=False) as resp, open(fp, 'wb') as h_out:
             shutil.copyfileobj(resp, h_out)
         if monitor is True:
@@ -59,6 +58,9 @@ def _download_file(url:str, fp:pathlib.Path, monitor:bool=True, target_size:Opti
             p_mon.join()
         return True
     except urllib3.exceptions.HTTPError as e:
+        if monitor is True:
+            p_mon.terminate()
+            p_mon.join()
         logging.error(e)
         return False
 
@@ -67,10 +69,9 @@ def _get_paths_for_urls(urls:list, data_dir:pathlib.Path) -> "list[pathlib.Path]
     return files
 
 
-#https://files.pushshift.io/reddit/submissions/
 
-def download_dump(year:int, month:int, comments:bool=True, submissions:bool=True, force:bool=False, folder:Optional[str]=None) -> None:
-    data_dir = determine_data_dir(folder, "compressed")
+def download_dump(year:int, month:int, comments:bool=True, submissions:bool=True, force:bool=False) -> None:
+    data_dir = DATA_DIR /  "compressed"
     ext = infer_extension(year, month)
     date_str = f"{year}-{str(month).zfill(2)}"
     urls =[]

@@ -5,6 +5,7 @@ import downloading
 import logging
 import helpers
 from typing import Optional
+from config import DATA_DIR
 
 def _parse_checksum_file(fp:pathlib.Path) -> dict:
     check = fp.read_text("utf-8")
@@ -25,7 +26,7 @@ def _read_file_hash(fp:pathlib.Path):
     return hasher.hexdigest()
 
 
-def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=None, verify:bool=False, delete_mismatched:bool=False,
+def list_files(downloaded:bool=True, extracted:bool=False, verify:bool=False, delete_mismatched:bool=False,
                delete_empty:bool=False, delete_undersized:bool=False, size_ratio=0.8) -> None:
     if verify is True:
         logging.info("Downloading the most recent checksum file")
@@ -33,7 +34,7 @@ def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=
         check_map = _parse_checksum_file(check_fp)
 
     if downloaded is True:
-        data_dir = helpers.determine_data_dir(folder, "compressed")
+        data_dir = DATA_DIR / "compressed"
         logging.info("Downloaded comment dumps:")
         for i, fp in enumerate(sorted(data_dir.glob("RC_*-*.*"))):
             check_str = ""
@@ -91,7 +92,7 @@ def list_files(downloaded:bool=True, extracted:bool=False, folder:Optional[str]=
 
 
     if extracted is True:
-        data_dir = helpers.determine_data_dir(folder, "extracted")
+        data_dir = DATA_DIR / "extracted"
         print("Extracted comment dumps:")
         for i, fp in enumerate(sorted(data_dir.glob("**/*_*-*"))):
             logging.info(f"{i} {fp} ({helpers.get_file_size_info_str(fp)})")

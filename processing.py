@@ -2,15 +2,15 @@ import logging
 import json
 import datetime
 from typing import Optional
+from config import DATA_DIR
+from helpers import count_and_log
 
-from helpers import determine_data_dir, count_and_log
 
-
-def split_extracted(year:int, month:int, subreddit:str, force:bool=False, delete_source:bool=False, folder:Optional[str]=None) -> None:
+def split_extracted(year:int, month:int, subreddit:str, force:bool=False, delete_source:bool=False) -> None:
     """Split extracted subreddit/year/month files further by day"""
     subreddit = subreddit.lower()
-    in_sub_dn = determine_data_dir(folder, f"extracted/monthly/{subreddit}")
-    out_sub_dn = determine_data_dir(folder, f"extracted/daily/{subreddit}")
+    in_sub_dn = DATA_DIR /  f"extracted/monthly/{subreddit}"
+    out_sub_dn = DATA_DIR / f"extracted/daily/{subreddit}"
     in_fp = in_sub_dn / f"{subreddit}_{year}-{str(month).zfill(2)}"
     split_start = datetime.datetime.utcnow()
     logging.info(f"Splitting '{in_fp}' into daily files")

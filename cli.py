@@ -6,6 +6,9 @@ import downloading
 import extraction
 import processing
 import verification
+import json
+import pathlib
+from config import LOCAL_CONFIG_FP
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s: %(message)s',
@@ -76,20 +79,20 @@ class AbstractTool():
 
 class SubmissionTool(AbstractTool):
 
-    def download(self, since:Union[str, int], until:Union[str, int, None], force:bool=False, folder:Optional[str]=None) -> None:
+    def download(self, since:Union[str, int], until:Union[str, int, None], force:bool=False) -> None:
         self._initialize_dates(since, until)
         logging.info(f"Downloading available submission dumps from {self._get_date_range_str()}")
         for p in self.periods:
-            downloading.download_dump(year=p[0], month=p[1], comments=False, submissions=True, force=force, folder=folder)
+            downloading.download_dump(year=p[0], month=p[1], comments=False, submissions=True, force=force)
     
 
-    def extract(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
+    def extract(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, force:bool=False) -> None:
         self.placeholder()
 
-    def split(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, delete_source:bool=False, force:bool=False, folder:Optional[str]=None) -> None:
+    def split(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, delete_source:bool=False, force:bool=False) -> None:
         self.placeholder()
 
-    def list(self, downloaded:bool=True, extracted:bool=False, folder:Optional[str]=None, verify:bool=False, delete_mismatched:bool=False,
+    def list(self, downloaded:bool=True, extracted:bool=False, verify:bool=False, delete_mismatched:bool=False,
              delete_empty:bool=False, delete_undersized:bool=False, size_ratio=0.8) -> None:
         self.placeholder()
 
@@ -97,35 +100,51 @@ class SubmissionTool(AbstractTool):
         exit("Sorry, this functionality is not yet implemented!")
 
 
+
+class ConfigTool():
+
+    def folder(self, folder:str) -> None:
+        dn = pathlib.Path(folder)
+        if not dn.is_dir():
+            try:
+                dn.mkdir(parents=True, exist_ok=True)
+            except IOError:
+                exit(f"It looks like {folder} is not a valid folder path")
+        d = {"dataFolder": folder}
+        logging.info(f"Data folder set: '{dn}'")
+        LOCAL_CONFIG_FP.write_text(json.dumps(d, indent=4))
+
+
+
 class CommentTool(AbstractTool):
 
     def __init__(self) -> None:
         super().__init__()
 
-    def download(self, since:Union[str, int], until:Union[str, int, None], force:bool=False, folder:Optional[str]=None) -> None:
+    def download(self, since:Union[str, int], until:Union[str, int, None], force:bool=False) -> None:
         self._initialize_dates(since, until)
         logging.info(f"Downloading available comment dumps from {self._get_date_range_str()}")
         for p in self.periods:
-            downloading.download_dump(year=p[0], month=p[1], comments=True, submissions=False, force=force, folder=folder)
+            downloading.download_dump(year=p[0], month=p[1], comments=True, submissions=False, force=force)
 
-    def extract(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, force:bool=False, folder:Optional[str]=None) -> None:
+    def extract(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, force:bool=False) -> None:
         self._initialize_dates(since, until)
         subreddit = subreddit.lower().strip()
         logging.info(f"Extracting downloaded comments for subreddit '{subreddit}' from {self._get_date_range_str()}")
         for p in self.periods:
-            extraction.extract_from_dump(year=p[0], month=p[1], subreddit=subreddit, force=force, folder=folder)
+            extraction.extract_from_dump(year=p[0], month=p[1], subreddit=subreddit, force=force)
 
-    def split(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, delete_source:bool=False, force:bool=False, folder:Optional[str]=None) -> None:
+    def split(self, since:Union[str, int], until:Union[str, int, None], subreddit:str, delete_source:bool=False, force:bool=False) -> None:
         self._initialize_dates(since, until)
         subreddit = subreddit.lower().strip()
         logging.info(f"Splitting monthly '{subreddit}' files from {self._get_date_range_str()} into daily files")
         for p in self.periods:
-            processing.split_extracted(year=p[0], month=p[1], subreddit=subreddit, delete_source=delete_source, force=force, folder=folder)
+            processing.split_extracted(year=p[0], month=p[1], subreddit=subreddit, delete_source=delete_source, force=force)
 
-    def list(self, downloaded:bool=True, extracted:bool=False, folder:Optional[str]=None, verify:bool=False, delete_mismatched:bool=False,
+    def list(self, downloaded:bool=True, extracted:bool=False, verify:bool=False, delete_mismatched:bool=False,
              delete_empty:bool=False, delete_undersized:bool=False, size_ratio=0.8) -> None:
         #TODO: Refactor list / checksum functionality from the ground up
-        verification.list_files(downloaded, extracted, folder, verify, delete_mismatched, delete_empty, delete_undersized, size_ratio)
+        verification.list_files(downloaded, extracted, verify, delete_mismatched, delete_empty, delete_undersized, size_ratio)
 
 
 class CommandLineInterface():
@@ -133,7 +152,7 @@ class CommandLineInterface():
     def __init__(self):
         self.comments = CommentTool()
         self.submissions = SubmissionTool()
-        
+        self.config = ConfigTool()
 
 if __name__ == "__main__":
     fire.Fire(CommandLineInterface)
