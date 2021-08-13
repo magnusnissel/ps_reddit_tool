@@ -1,4 +1,4 @@
-# ps_dump_extractor
+# ps_reddit_tool
 
 ## About
 
