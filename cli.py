@@ -8,7 +8,8 @@ import processing
 import verification
 import json
 import pathlib
-from config import LOCAL_CONFIG_FP
+import praw
+from config import LOCAL_CONFIG_FP, DATA_DIR
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s: %(message)s',
@@ -114,6 +115,143 @@ class ConfigTool():
         logging.info(f"Data folder set: '{dn}'")
         LOCAL_CONFIG_FP.write_text(json.dumps(d, indent=4))
 
+    def auth(self, id:str, secret:str, password:str, agent:str, name:str) -> None:
+        d = json.loads(LOCAL_CONFIG_FP.read_text())
+        d["auth"] = {
+            "clientId": id,
+            "clientSecret": secret,
+            "password": password,
+            "userAgent": agent,
+            "userName": name
+        }
+        logging.info(f"Reddit bot auth data saved")
+        LOCAL_CONFIG_FP.write_text(json.dumps(d, indent=4))
+
+
+
+
+def authenticate_with_praw(credentials: dict) -> praw.Reddit:
+
+    reddit = praw.Reddit(client_id=credentials["clientId"], client_secret=credentials["clientSecret"],
+                         password=credentials["password"], user_agent=credentials["userAgent"], username=credentials["userName"])
+
+    logging.info(f"Authenticated as {reddit.user.me()}")
+    return reddit
+
+class PrawJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, praw.models.reddit.subreddit.Subreddit):
+            d = obj.__dict__
+            d.pop("_reddit", None)
+            d.pop("_fetched", None)
+            return d
+        elif isinstance(obj, praw.models.Redditor):
+            d = obj.__dict__
+            d.pop("_reddit", None)
+            d.pop("_listing_use_sort", None)
+            d.pop("_fetched", None)
+            return d
+        elif isinstance(obj, praw.models.reddit.poll.PollData):
+            d = obj.__dict__
+            d.pop("_reddit", None)
+            d.pop("_user_selection", None)
+            return d
+        elif isinstance(obj, praw.models.reddit.poll.PollOption):
+            d = obj.__dict__
+            #print(sorted(d.keys()))
+            d.pop("_reddit", None)
+            return d
+        else:
+            return super(PrawJsonEncoder, self).default(obj)
+
+
+class StreamTool():
+    
+    def __init__(self) -> None:
+        self.reddit = None
+
+
+    def _check_auth_info(self) -> None:
+        d = json.loads(LOCAL_CONFIG_FP.read_text())
+        problem = False
+        try:
+            if len(d["auth"].keys()) == 0:
+                exit("Missing reddit bot auth information")
+            for k, v in d["auth"].items():
+                if len(v.strip()) < 3:
+                    exit("Invalid reddit bot auth information")
+        except KeyError:
+            exit("Missing reddit bot auth information")
+        else:
+            self.credentials = d["auth"]
+
+    @staticmethod        
+    def _prep_json_str(d: dict) -> str:
+        d.pop("_reddit", None)
+        d.pop("_fetched", None)
+        d.pop("_comments_by_id", None)
+        return json.dumps(d, indent=None, cls=PrawJsonEncoder)
+
+    @staticmethod
+    def _get_output_path(prefix:str, subreddit:str, only_id:bool=False) -> pathlib.Path:
+        now = datetime.datetime.utcnow()
+        dstr = now.strftime("%Y%m%d")
+        dn = DATA_DIR / "streamed" / subreddit / dstr
+        dn.mkdir(parents=True, exist_ok=True)
+        ts = int(now.timestamp())
+        if only_id is True:
+            fp = dn / f"{prefix}_ids_{subreddit}_{ts}"
+        else:
+            fp = dn / f"{prefix}_{subreddit}_{ts}"
+        return fp
+
+    def submissions(self, subreddit:str, only_id:bool=False, skip_existing:bool=False, chunksize:int=100, max_chunk_duration=300):
+        self._check_auth_info()
+        subreddit = subreddit.lower().strip()
+        self.reddit = authenticate_with_praw(self.credentials)
+        logging.info(f"Streaming submissions in subreddit '{subreddit}'")
+        data = []
+        i = 0
+        last_saved = datetime.datetime.utcnow()  # to allow early saving even if chunksize isn't met
+
+        for submission in self.reddit.subreddit(subreddit).stream.submissions(skip_existing=skip_existing):
+            if only_id is True:
+                data.append(submission.id)
+            else:
+                data.append(self._prep_json_str(submission.__dict__))
+            i += 1
+            duration = (datetime.datetime.utcnow() - last_saved).total_seconds()
+            if duration > max_chunk_duration or i >= chunksize:
+                if len(data) > 0:
+                    fp = self._get_output_path("rs", subreddit, only_id)
+                    fp.write_text("\n".join(data))
+                    data = []
+                    logging.info(fp.name)
+                    i = 0
+
+    def comments(self, subreddit:str, only_id:bool=False, skip_existing:bool=False, chunksize:int=100, max_chunk_duration=300):
+        self._check_auth_info()
+        subreddit = subreddit.lower().strip()
+        self.reddit = authenticate_with_praw(self.credentials)
+        logging.info(f"Streaming comments in subreddit '{subreddit}'")
+        data = []
+        i = 0
+        last_saved = datetime.datetime.utcnow()  # to allow early saving even if chunksize isn't met
+        for comment in self.reddit.subreddit(subreddit).stream.comments(skip_existing=skip_existing):
+            if only_id is True:
+                data.append(comment.id)
+            else:
+                data.append(self._prep_json_str(comment.__dict__))
+            i += 1
+            duration = (datetime.datetime.utcnow() - last_saved).total_seconds()
+            if duration > max_chunk_duration or i >= chunksize:
+                if len(data) > 0:
+                    fp = self._get_output_path("rc", subreddit, only_id)
+                    fp.write_text("\n".join(data))
+                    data = []
+                    logging.info(fp.name)
+                    i = 0
+                    last_saved = datetime.datetime.utcnow()
 
 
 class CommentTool(AbstractTool):
@@ -153,6 +291,7 @@ class CommandLineInterface():
         self.comments = CommentTool()
         self.submissions = SubmissionTool()
         self.config = ConfigTool()
+        self.stream = StreamTool()
 
 if __name__ == "__main__":
     fire.Fire(CommandLineInterface)
