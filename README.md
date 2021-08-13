@@ -8,11 +8,10 @@ The comments are split into uncompressed files (by subreddit & month) using the 
 The script can also be used to further split these extracted subreddit files into daily chunks (using each comment's UTC creation date) to create smaller files to work with.
 
 
-
 ## Configuration
 
 By default the files are downloaded in a folder named __ps_reddit_tool__ within the current user's home directory. This default folder be changed by calling 
-```python3 cli.py config folder PATH_TO_FOLDER```.
+```python3 cli.py config folder PATH_TO_FOLDER```. This information is stored in the script directory inside the _local_config.json_ file.
 
 ## Example
 
