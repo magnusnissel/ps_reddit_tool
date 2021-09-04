@@ -1,69 +1,114 @@
-
 import datetime
 import logging
 from typing import Optional
 import bz2
 import lzma
-import pyzstd
+import json
+import zstandard
 from config import DATA_DIR
-from helpers import infer_extension, is_relevant_ln, count_and_log
+from helpers import (
+    infer_extension,
+    is_relevant_ln,
+    count_and_log,
+    create_ln_str_with_json_boilerplate,
+)
 
 
-def extract_from_dump(year:int, month:int, subreddit:str, force:bool=False) -> None:
+def extract_from_dump(prefix: str, year: int, month: int, subreddit: str, force: bool = False) -> None:
     """Extract json objects for a specific subreddit for a given year and month into a single year/month file,
-       assuming the necessary dump files were downloaded beforehand"""
+    assuming the necessary dump files were downloaded beforehand"""
     in_dn = DATA_DIR / "compressed"
     out_dn = DATA_DIR / f"extracted/monthly/{subreddit}"
-
-    ext = infer_extension(year, month)
+    out_dn.mkdir(parents=True, exist_ok=True)
+    ext = infer_extension(prefix, year, month)
+    n = 0
+    if prefix == "RC":
+        kind = "comments"
+    elif prefix == "RS":
+        kind = "submissions"
     subreddit = subreddit.lower()
     date_str = f"{year}-{str(month).zfill(2)}"
-    out_fp = out_dn / f"{subreddit}_{date_str}"
+    out_fp = out_dn / f"{prefix}_{subreddit}_{date_str}.json"
     if force is True or not out_fp.is_file():
         ext_start = datetime.datetime.utcnow()
 
         if year < 2020:
-            fn = f"RC_{date_str}.{ext}"
+            fn = f"{prefix}_{date_str}.{ext}"
             files = [in_dn / fn]
         else:
             files = []
             for d in range(1, 32):
                 try:
                     day = datetime.date(year=year, month=month, day=d)
-                except ValueError: #invalid date, e.g. February 30th
+                except ValueError:  # invalid date, e.g. February 30th
                     pass
                 else:
-                    fn = f"RC_{day.isoformat()}.{ext}"
+                    fn = f"{prefix}_{day.isoformat()}.{ext}"
                     fp = in_dn / fn
                     files.append(fp)
         for fp in files:
             if fp.is_file():
-                logging.info(f"Extracting comments for subreddit '{subreddit}' from {fp} to {out_fp}")
+
+                logging.info(f"Extracting {kind} for subreddit '{subreddit}' from {fp} to {out_fp}")
 
                 with open(out_fp, mode="w", encoding="utf-8") as h_out:
-                    n = 1
+                    n = 0
                     if ext == "bz2":
                         with bz2.BZ2File(fp) as h_in:
                             for ln in h_in:
+                                ln = ln.decode("utf-8")
                                 if is_relevant_ln(ln, subreddit) is True:
-                                    h_out.write(ln.decode("utf-8"))
+                                    ln_str = create_ln_str_with_json_boilerplate(ln, n)
+                                    h_out.write(ln_str)
                                     n = count_and_log(n)
+                        if n > 0:  # write final ]
+                            h_out.write("\n]")
                     elif ext == "xz":
                         with lzma.LZMAFile(fp) as h_in:
                             for ln in h_in:
+                                ln = ln.decode("utf-8")
                                 if is_relevant_ln(ln, subreddit) is True:
-                                    h_out.write(ln.decode("utf-8"))
+                                    ln_str = create_ln_str_with_json_boilerplate(ln, n)
+                                    h_out.write(ln_str)
                                     n = count_and_log(n)
+                        if n > 0:  # write final ]
+                            h_out.write("\n]")
                     elif ext == "zst":
-                        with pyzstd.ZstdFile(fp) as h_in:
-                            for ln in h_in:
-                                if is_relevant_ln(ln, subreddit) is True:
-                                    h_out.write(ln.decode("utf-8"))
-                                    n = count_and_log(n)
-                logging.info(f"Saved {n:,} comments to {out_fp}")
+
+                        chunksize = 2 ** 26  # 64MB per chunk
+                        with open(fp, "rb") as h_in:
+                            decomp = zstandard.ZstdDecompressor(max_window_size=2147483648)
+
+                            with decomp.stream_reader(h_in) as reader:
+                                prev_ln = ""
+                                while True:
+                                    chunk = reader.read(chunksize)
+                                    if not chunk:
+                                        break
+                                    lines = chunk.decode("utf-8").split("\n")
+                                    for i, ln in enumerate(lines[:-1]):
+                                        if i == 0:
+                                            ln = f"{prev_ln}{ln}"
+                                            ln = ln.strip()
+                                        if is_relevant_ln(ln, subreddit) is True:
+                                            ln_str = create_ln_str_with_json_boilerplate(ln, n)
+                                            h_out.write(ln_str)
+                                            n = count_and_log(n)
+                                        prev_ln = lines[-1]
+                                if n > 0:  # write final ]
+                                    h_out.write("\n]")
+                if n > 0:
+                    logging.info(f"Saved {n:,} lines to {out_fp}")
+                else:
+                    try:
+                        out_fp.unlink()
+                    except FileNotFoundError:
+                        pass
             else:
                 logging.warning(f"File {fp} not found for extraction")
         duration = str(datetime.datetime.utcnow() - ext_start).split(".")[0].zfill(8)
-        logging.info(f"Extraction process completed after {duration}")
+        logging.info(f"Extraction process of {n} lines completed after {duration}")
     else:
-        logging.info(f"Skipping comment extraction to {out_fp} because the file already exists  (--force=True to override this)")
+        logging.info(
+            f"Skipping extraction to {out_fp} because the file already exists  (--force=True to override this)"
+        )

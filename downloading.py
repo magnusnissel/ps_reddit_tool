@@ -18,9 +18,7 @@ def download_checksum_file(kind: str = "comments") -> pathlib.Path:
     else:
         raise ValueError("Invalid value for 'kind' in download_checksum_file")
     fp = DATA_DIR / f"sha256sums_{kind}.txt"
-    _download_file(
-        url, fp, monitor=False
-    )  # TODO: Raise appropriate exception if dowload fails
+    _download_file(url, fp, monitor=False)  # TODO: Raise appropriate exception if dowload fails
     return fp
 
 
@@ -33,9 +31,7 @@ def _monitor_filepath(fp: pathlib.Path, target_size: Optional[float] = None) -> 
                     f"{get_file_size_info_str(fp)} / {convert_size_to_str(target_size)} downloaded so far ({fp.name})"
                 )
             else:
-                logging.info(
-                    f"{get_file_size_info_str(fp)} downloaded so far ({fp.name})"
-                )
+                logging.info(f"{get_file_size_info_str(fp)} downloaded so far ({fp.name})")
         except FileNotFoundError:
             time.sleep(10)
         else:
@@ -63,9 +59,7 @@ def _download_file(
         p_mon = mp.Process(target=_monitor_filepath, args=(fp, target_size))
         p_mon.start()
     try:
-        with http.request("GET", url, preload_content=False) as resp, open(
-            fp, "wb"
-        ) as h_out:
+        with http.request("GET", url, preload_content=False) as resp, open(fp, "wb") as h_out:
             shutil.copyfileobj(resp, h_out)
         if monitor is True:
             p_mon.terminate()
@@ -85,23 +79,22 @@ def _get_paths_for_urls(urls: list, data_dir: pathlib.Path) -> "list[pathlib.Pat
 
 
 def download_dump(
+    prefix: str,
     year: int,
     month: int,
-    comments: bool = True,
-    submissions: bool = True,
     force: bool = False,
 ) -> None:
     data_dir = DATA_DIR / "compressed"
-    ext = infer_extension(year, month)
+    ext = infer_extension(prefix, year, month)
     date_str = f"{year}-{str(month).zfill(2)}"
     urls = []
-    if comments is True:
-        urls.append(
-            f"https://files.pushshift.io/reddit/comments/RC_{date_str}.{ext}"
-        )  # varying extenions
+    if prefix == "RC":
+        urls.append(f"https://files.pushshift.io/reddit/comments/RC_{date_str}.{ext}")  # varying extenions
 
-    if submissions is True:
+    elif prefix == "RS":
         urls.append(f"https://files.pushshift.io/reddit/submissions/RS_{date_str}.zst")
+    else:
+        raise ValueError("Invalid value for 'prefix'")
 
     paths = _get_paths_for_urls(urls, data_dir)
     dl_urls = []
@@ -115,30 +108,18 @@ def download_dump(
     if len(dl_paths) > 0:
         logging.info(f"Downloading {len(dl_paths)} file to {data_dir} for {date_str}")
     if force is False and len(skip_paths) > 0:
-        logging.info(
-            f"Skipping {len(skip_paths)} existing files for {date_str} (--force=True to override this)"
-        )
+        logging.info(f"Skipping {len(skip_paths)} existing files for {date_str} (--force=True to override this)")
     for fp, url in zip(dl_paths, dl_urls):
-        if (
-            force is True or not fp.is_file()
-        ):  # Second check just in case is_file() status has changed
+        if force is True or not fp.is_file():  # Second check just in case is_file() status has changed
 
             dl_file_size = _check_url_content_length(url)
             if dl_file_size != -1:
                 logging.info(f"Downloading {fp.name} ...")
-                logging.info(
-                    f"Approximate file size: {convert_size_to_str(dl_file_size)}"
-                )
+                logging.info(f"Approximate file size: {convert_size_to_str(dl_file_size)}")
                 dl_start = datetime.datetime.utcnow()
                 success = _download_file(url, fp, True, dl_file_size)
-                duration = (
-                    str(datetime.datetime.utcnow() - dl_start).split(".")[0].zfill(8)
-                )
+                duration = str(datetime.datetime.utcnow() - dl_start).split(".")[0].zfill(8)
                 if success is True:
-                    logging.info(
-                        f"Downloaded {fp.name} in {duration} ({get_file_size_info_str(fp)})"
-                    )
+                    logging.info(f"Downloaded {fp.name} in {duration} ({get_file_size_info_str(fp)})")
                 else:
-                    logging.warning(
-                        f"Failed to download {fp.name} after trying for {duration}"
-                    )
+                    logging.warning(f"Failed to download {fp.name} after trying for {duration}")

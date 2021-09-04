@@ -1,4 +1,5 @@
 fire
 urllib3
 pyzstd
+zstandard
 praw>=7.4.0

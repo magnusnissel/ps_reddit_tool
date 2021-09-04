@@ -26,45 +26,54 @@ def _read_file_hash(fp: pathlib.Path):
     return hasher.hexdigest()
 
 
-def check_filesize(prefix: str, size_ratio: int = 0.8) -> None:
+def _check_filesize(fp: pathlib.Path, size_ratio: float = 0.8):
+    if fp.stat().st_size == 0:
+        try:
+            fp.unlink()
+        except FileNotFoundError:
+            pass
+        else:
+            logging.warning(f"Deleted 0 byte file: {fp}")
+    else:
+        # Check the url again for the approximate expected file size, if the file is significantly below it, then delete it
+        if fp.name.startswith("RC_"):
+            url = f"https://files.pushshift.io/reddit/comments/{fp.name}"
+        elif fp.name.startswith("RS_"):
+            url = f"https://files.pushshift.io/reddit/submissions/{fp.name}"
+        else:
+            raise ValueError("File {fp.name} has an invalid prefix")
+        try:
+            dl_file_size = downloading._check_url_content_length(url)
+        except TypeError:  # e.g. when url does not exist and function returns None
+            pass
+        else:
+            file_size = fp.stat().st_size
+            if size_ratio > 0.99:
+                size_ratio = 0.99
+            elif size_ratio < 0.1:
+                size_ratio = 0.1
+            threshold = size_ratio * dl_file_size
+            pct = round((1 - size_ratio) * 100, 0)
+            if file_size < threshold:
+                logging.warning(
+                    f"Downloaded file is more than {pct}% smaller than expected. (Expected {helpers.convert_size_to_str(dl_file_size)}, found {helpers.convert_size_to_str(file_size)}"
+                )
+                try:
+                    fp.unlink()
+                except FileNotFoundError:
+                    pass
+                else:
+                    logging.warning(f"Deleted undersized file: {fp}")
+
+
+def check_filesizes(prefix: str, size_ratio: float = 0.8) -> None:
     data_dir = DATA_DIR / "compressed"
     for i, fp in enumerate(sorted(data_dir.glob(f"{prefix}_*-*.*"))):
         logging.info(f"{i} {fp} ({helpers.get_file_size_info_str(fp)})")
-        if fp.stat().st_size == 0:
-            try:
-                fp.unlink()
-            except FileNotFoundError:
-                pass
-            else:
-                logging.warning(f"Deleted 0 byte file: {fp}")
-        else:
-            # Check the url again for the approximate expected file size, if the file is significantly below it, then delete it
-            url = f"https://files.pushshift.io/reddit/comments/{fp.name}"
-            try:
-                dl_file_size = downloading._check_url_content_length(url)
-            except TypeError:  # e.g. when url does not exist and function returns None
-                pass
-            else:
-                file_size = fp.stat().st_size
-                if size_ratio > 0.99:
-                    size_ratio = 0.99
-                elif size_ratio < 0.1:
-                    size_ratio = 0.1
-                threshold = size_ratio * dl_file_size
-                pct = round((1 - size_ratio) * 100, 0)
-                if file_size < threshold:
-                    logging.warning(
-                        f"Downloaded file is more than {pct}% smaller than expected. (Expected {helpers.convert_size_to_str(dl_file_size)}, found {helpers.convert_size_to_str(file_size)}"
-                    )
-                    try:
-                        fp.unlink()
-                    except FileNotFoundError:
-                        pass
-                    else:
-                        logging.warning(f"Deleted undersized file: {fp}")
+        _check_filesize(fp, size_ratio)
 
 
-def check_filehash(prefix: str) -> None:
+def check_filehashes(prefix: str) -> None:
     data_dir = DATA_DIR / "compressed"
     logging.info("Downloading the most recent checksum file")
     if prefix == "RC":
@@ -82,15 +91,15 @@ def check_filehash(prefix: str) -> None:
         try:
             checksum = check_map[fp.name]
         except KeyError:
-            check_str = f" (No checksum found, unable to verify)"
+            check_str = f" (No checksum info found, unable to verify)"
         else:
             file_hash = _read_file_hash(fp)
             if checksum == file_hash:
-                check_str = f" (Checksum verified)"
+                check_str = f" – Checksum verified"
             else:
                 bad_check = True
                 check_str = (
-                    f" (Checksum mismatch: Expected {checksum}, got {file_hash})"
+                    f" – Checksum mismatch: Expected {checksum}, got {file_hash}"
                 )
 
         if bad_check is False:
@@ -99,6 +108,12 @@ def check_filehash(prefix: str) -> None:
             logging.warning(
                 f"{i} {fp} ({helpers.get_file_size_info_str(fp)}){check_str}"
             )
+            try:
+                fp.unlink()
+            except FileNotFoundError:
+                pass
+            else:
+                logging.warning(f"Deleted file with invalid checksum: {fp}")
 
 
 def list_files(prefix: str, downloaded: bool = True, extracted: bool = False) -> None:
