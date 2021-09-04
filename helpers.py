@@ -106,8 +106,9 @@ def is_relevant_ln(ln: str, subreddit: str) -> bool:
         try:
             d = json.loads(ln)
         except JSONDecodeError as e:
-            print(ln)
-            raise JSONDecodeError(e)
+            logging.error("JSON DECODE ERROR")
+            logging.error(e)
+            logging.warning(ln)
         else:
             return d["subreddit"].lower() == subreddit
     else:
