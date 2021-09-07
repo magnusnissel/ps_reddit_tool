@@ -7,6 +7,7 @@ import urllib3
 import multiprocessing as mp
 import time
 from helpers import infer_extension, get_file_size_info_str, convert_size_to_str
+from verification import check_filehash, check_filesize
 from config import DATA_DIR
 
 
@@ -79,10 +80,7 @@ def _get_paths_for_urls(urls: list, data_dir: pathlib.Path) -> "list[pathlib.Pat
 
 
 def download_dump(
-    prefix: str,
-    year: int,
-    month: int,
-    force: bool = False,
+    prefix: str, year: int, month: int, force: bool = False, checkhash: bool = False, checksize: bool = False
 ) -> None:
     data_dir = DATA_DIR / "compressed"
     ext = infer_extension(prefix, year, month)
@@ -121,5 +119,10 @@ def download_dump(
                 duration = str(datetime.datetime.utcnow() - dl_start).split(".")[0].zfill(8)
                 if success is True:
                     logging.info(f"Downloaded {fp.name} in {duration} ({get_file_size_info_str(fp)})")
+                    if checkhash is True:
+                        check_filehash(fp)
+                    if checksize is True:
+                        size_ratio = 0.8
+                        check_filesize(fp, size_ratio)
                 else:
                     logging.warning(f"Failed to download {fp.name} after trying for {duration}")

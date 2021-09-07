@@ -110,7 +110,12 @@ def is_relevant_ln(ln: str, subreddit: str) -> bool:
             logging.error(e)
             logging.warning(ln)
         else:
-            return d["subreddit"].lower() == subreddit
+            try:
+                return d["subreddit"].lower() == subreddit
+            except KeyError:  # Submissions from /r/Promos appear to have no subreddit field (pseudo-subreddit for ad links)
+                # there are a ton of them starting in 2004 so return False silently
+                # logging.warning(f"No field 'subreddit' field found in line for https://reddit.com{d['permalink']}")
+                return False
     else:
         return False
 

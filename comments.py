@@ -11,11 +11,20 @@ class CommentTool(AbstractTool):
     def __init__(self) -> None:
         super().__init__()
 
-    def download(self, since: Union[str, int], until: Union[str, int, None], force: bool = False) -> None:
+    def download(
+        self,
+        since: Union[str, int],
+        until: Union[str, int, None],
+        force: bool = False,
+        checkhash: bool = False,
+        checksize: bool = False,
+    ) -> None:
         self._initialize_dates(since, until)
         logging.info(f"Downloading available comment dumps from {self._get_date_range_str()}")
         for p in self.periods:
-            downloading.download_dump(prefix="RC", year=p[0], month=p[1], force=force)
+            downloading.download_dump(
+                prefix="RC", year=p[0], month=p[1], force=force, checkhash=checkhash, checksize=checksize
+            )
 
     def extract(
         self, since: Union[str, int], until: Union[str, int, None], subreddit: str, force: bool = False

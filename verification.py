@@ -26,7 +26,7 @@ def _read_file_hash(fp: pathlib.Path):
     return hasher.hexdigest()
 
 
-def _check_filesize(fp: pathlib.Path, size_ratio: float = 0.8):
+def check_filesize(fp: pathlib.Path, size_ratio: float = 0.8):
     if fp.stat().st_size == 0:
         try:
             fp.unlink()
@@ -66,11 +66,47 @@ def _check_filesize(fp: pathlib.Path, size_ratio: float = 0.8):
                     logging.warning(f"Deleted undersized file: {fp}")
 
 
+def check_filehash(fp: pathlib.Path, check_map: Optional[dict] = None) -> None:
+    if check_map is None:
+        if fp.name.startswith("RC_"):
+            prefix = "RC"
+            check_fp = downloading.download_checksum_file("comments")
+        elif fp.name.startswith("RS_"):
+            prefix = "RS"
+            check_fp = downloading.download_checksum_file("submissions")
+        else:
+            raise ValueError("Expecting file prefix RC_ or RS_")
+        check_map = _parse_checksum_file(check_fp)
+    check_str = ""
+    bad_check = False
+    try:
+        checksum = check_map[fp.name]
+    except KeyError:
+        check_str = f" (No checksum info found, unable to verify)"
+    else:
+        file_hash = _read_file_hash(fp)
+        if checksum == file_hash:
+            check_str = f" – Checksum verified"
+        else:
+            bad_check = True
+            check_str = f" – Checksum mismatch: Expected {checksum}, got {file_hash}"
+    if bad_check is False:
+        logging.info(f"{fp} ({helpers.get_file_size_info_str(fp)}){check_str}")
+    else:
+        logging.warning(f"{fp} ({helpers.get_file_size_info_str(fp)}){check_str}")
+        try:
+            fp.unlink()
+        except FileNotFoundError:
+            pass
+        else:
+            logging.warning(f"Deleted file with invalid checksum: {fp}")
+
+
 def check_filesizes(prefix: str, size_ratio: float = 0.8) -> None:
     data_dir = DATA_DIR / "compressed"
     for i, fp in enumerate(sorted(data_dir.glob(f"{prefix}_*-*.*"))):
         logging.info(f"{i} {fp} ({helpers.get_file_size_info_str(fp)})")
-        _check_filesize(fp, size_ratio)
+        check_filesize(fp, size_ratio)
 
 
 def check_filehashes(prefix: str) -> None:
@@ -85,35 +121,8 @@ def check_filehashes(prefix: str) -> None:
 
     check_map = _parse_checksum_file(check_fp)
 
-    for i, fp in enumerate(sorted(data_dir.glob(f"{prefix}_*-*.*"))):
-        check_str = ""
-        bad_check = False
-        try:
-            checksum = check_map[fp.name]
-        except KeyError:
-            check_str = f" (No checksum info found, unable to verify)"
-        else:
-            file_hash = _read_file_hash(fp)
-            if checksum == file_hash:
-                check_str = f" – Checksum verified"
-            else:
-                bad_check = True
-                check_str = (
-                    f" – Checksum mismatch: Expected {checksum}, got {file_hash}"
-                )
-
-        if bad_check is False:
-            logging.info(f"{i} {fp} ({helpers.get_file_size_info_str(fp)}){check_str}")
-        else:
-            logging.warning(
-                f"{i} {fp} ({helpers.get_file_size_info_str(fp)}){check_str}"
-            )
-            try:
-                fp.unlink()
-            except FileNotFoundError:
-                pass
-            else:
-                logging.warning(f"Deleted file with invalid checksum: {fp}")
+    for fp in sorted(data_dir.glob(f"{prefix}_*-*.*")):
+        check_filehash(fp, check_map)
 
 
 def list_files(prefix: str, downloaded: bool = True, extracted: bool = False) -> None:

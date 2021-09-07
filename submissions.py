@@ -8,11 +8,20 @@ import verification
 
 
 class SubmissionTool(AbstractTool):
-    def download(self, since: Union[str, int], until: Union[str, int, None], force: bool = False) -> None:
+    def download(
+        self,
+        since: Union[str, int],
+        until: Union[str, int, None],
+        force: bool = False,
+        checkhash: bool = False,
+        checksize: bool = False,
+    ) -> None:
         self._initialize_dates(since, until)
         logging.info(f"Downloading available submission dumps from {self._get_date_range_str()}")
         for p in self.periods:
-            downloading.download_dump(prefix="RS", year=p[0], month=p[1], force=force)
+            downloading.download_dump(
+                prefix="RS", year=p[0], month=p[1], force=force, checkhash=checkhash, checksize=checksize
+            )
 
     def extract(
         self, since: Union[str, int], until: Union[str, int, None], subreddit: str, force: bool = False
