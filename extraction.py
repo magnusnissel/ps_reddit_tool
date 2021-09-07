@@ -75,7 +75,9 @@ def extract_from_dump(prefix: str, year: int, month: int, subreddit: str, force:
                             h_out.write("\n]")
                     elif ext == "zst":
 
-                        chunksize = 2 ** 26  # 64MB per chunk
+                        chunksize = (
+                            2 ** 23
+                        )  # 8MB per chunk to reduce the immpact of "unexpected end of data" errors until fixed
                         with open(fp, "rb") as h_in:
                             decomp = zstandard.ZstdDecompressor(max_window_size=2147483648)
 
@@ -85,7 +87,18 @@ def extract_from_dump(prefix: str, year: int, month: int, subreddit: str, force:
                                     chunk = reader.read(chunksize)
                                     if not chunk:
                                         break
-                                    lines = chunk.decode("utf-8").split("\n")
+                                    try:
+                                        lines = chunk.decode("utf-8").split("\n")
+                                    except UnicodeDecodeError as e:
+                                        logging.warning(e)
+                                        # Attempt to ignore that segment
+                                        chunk = chunk[: e.start] + chunk[e.end :]
+                                        try:
+                                            lines = chunk.decode("utf-8").split("\n")
+                                        except UnicodeDecodeError as e:
+                                            logging.error(e)
+                                            lines = []
+
                                     for i, ln in enumerate(lines[:-1]):
                                         if i == 0:
                                             ln = f"{prev_ln}{ln}"
