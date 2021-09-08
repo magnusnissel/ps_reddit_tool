@@ -18,12 +18,21 @@ class CommentTool(AbstractTool):
         force: bool = False,
         checkhash: bool = False,
         checksize: bool = False,
+        retry: bool = False,
+        max_attempts: int = 3,
     ) -> None:
         self._initialize_dates(since, until)
         logging.info(f"Downloading available comment dumps from {self._get_date_range_str()}")
         for p in self.periods:
             downloading.download_dump(
-                prefix="RC", year=p[0], month=p[1], force=force, checkhash=checkhash, checksize=checksize
+                prefix="RC",
+                year=p[0],
+                month=p[1],
+                force=force,
+                checkhash=checkhash,
+                checksize=checksize,
+                retry=retry,
+                max_attempts=max_attempts,
             )
 
     def extract(

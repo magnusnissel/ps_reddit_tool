@@ -15,12 +15,21 @@ class SubmissionTool(AbstractTool):
         force: bool = False,
         checkhash: bool = False,
         checksize: bool = False,
+        retry: bool = False,
+        max_attempts: int = 3,
     ) -> None:
         self._initialize_dates(since, until)
         logging.info(f"Downloading available submission dumps from {self._get_date_range_str()}")
         for p in self.periods:
             downloading.download_dump(
-                prefix="RS", year=p[0], month=p[1], force=force, checkhash=checkhash, checksize=checksize
+                prefix="RS",
+                year=p[0],
+                month=p[1],
+                force=force,
+                checkhash=checkhash,
+                checksize=checksize,
+                retry=retry,
+                max_attempts=max_attempts,
             )
 
     def extract(
