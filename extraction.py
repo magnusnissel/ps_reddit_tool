@@ -98,17 +98,17 @@ def extract_from_dump(prefix: str, year: int, month: int, subreddit: str, force:
                                 if n > 0:  # write final ]
                                     h_out.write("\n]")
                 if n > 0:
-                    logging.info(f"Saved {n:,} lines to {out_fp}")
+                    logging.info(f"Saved {n:,} lines to {out_fp.name}")
                 else:
                     try:
                         out_fp.unlink()
                     except FileNotFoundError:
                         pass
             else:
-                logging.warning(f"File {fp} not found for extraction")
+                logging.warning(f"File {fp.name} not found for extraction")
         duration = str(datetime.datetime.utcnow() - ext_start).split(".")[0].zfill(8)
         logging.info(f"Extraction process of {n} lines completed after {duration}")
     else:
         logging.info(
-            f"Skipping extraction to {out_fp} because the file already exists  (--force=True to override this)"
+            f"Skipping extraction to {out_fp.name} because the file already exists  (--force=True to override this)"
         )

@@ -84,7 +84,7 @@ def convert_size_to_str(file_size: int) -> str:
 
 def count_and_log(n: int) -> int:
     n += 1
-    if n % 10000 == 0:
+    if n % 5000 == 0:
         logging.info(f"{n:,} lines extracted so far")
     return n
 
