@@ -31,21 +31,8 @@ def extract_from_dump(prefix: str, year: int, month: int, subreddit: str, force:
     out_fp = out_dn / f"{prefix}_{subreddit}_{date_str}.json"
     if force is True or not out_fp.is_file():
         ext_start = datetime.datetime.utcnow()
-
-        if year < 2020:
-            fn = f"{prefix}_{date_str}.{ext}"
-            files = [in_dn / fn]
-        else:
-            files = []
-            for d in range(1, 32):
-                try:
-                    day = datetime.date(year=year, month=month, day=d)
-                except ValueError:  # invalid date, e.g. February 30th
-                    pass
-                else:
-                    fn = f"{prefix}_{day.isoformat()}.{ext}"
-                    fp = in_dn / fn
-                    files.append(fp)
+        fn = f"{prefix}_{date_str}.{ext}"
+        files = [in_dn / fn]
         for fp in files:
             if fp.is_file():
 
