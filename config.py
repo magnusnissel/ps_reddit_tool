@@ -33,7 +33,7 @@ if LOCAL_CONFIG_FP.is_file():
     d = json.loads(LOCAL_CONFIG_FP.read_text())
     DATA_DIR = pathlib.Path(d["dataFolder"])
 else:
-    default_dir = pathlib.Path.home() / "ps_reddit_tool"
+    default_dir = pathlib.Path.home() / "thisdayinreddit"
     d = {"dataFolder": str(default_dir)}
     logging.info(f"Data folder set: '{default_dir}'")
     LOCAL_CONFIG_FP.write_text(json.dumps(d, indent=4))

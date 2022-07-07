@@ -95,10 +95,10 @@ def download_dump(
     date_str = f"{year}-{str(month).zfill(2)}"
     urls = []
     if prefix == "RC":
-        urls.append(f"https://files.pushshift.io/reddit/comments/RC_{date_str}.{ext}")  # varying extenions
+        urls.append(f"http://repo.pushshift.io/reddit/comments/RC_{date_str}.{ext}")  # varying extenions
 
     elif prefix == "RS":
-        urls.append(f"https://files.pushshift.io/reddit/submissions/RS_{date_str}.zst")
+        urls.append(f"http://repo.pushshift.io/reddit/submissions/RS_{date_str}.zst")
     else:
         raise ValueError("Invalid value for 'prefix'")
 
